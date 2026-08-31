@@ -20,14 +20,20 @@ const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
 
 const allowedOrigins = [
-  process.env.CLIENT_URL,
+  ...(process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',').map((s) => s.trim()) : []),
   'http://localhost:5173',
   'http://localhost:5174',
 ].filter(Boolean);
 
 app.use(
   cors({
-    origin: isProduction && allowedOrigins.length > 0 ? allowedOrigins : true,
+    origin(origin, callback) {
+      if (!origin) return callback(null, true);
+      // If CLIENT_URL not set in production, allow all (set CLIENT_URL for security)
+      if (isProduction && !process.env.CLIENT_URL) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
     credentials: true,
   })
 );
