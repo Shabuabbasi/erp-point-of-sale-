@@ -135,10 +135,11 @@ CLIENT_URL=https://your-frontend.onrender.com
 VITE_API_URL=https://superstore-erp-api.onrender.com/api
 ```
 
-4. **Redirects/Rewrites** (for React Router):
+4. **Redirects/Rewrites** (order matters — API rule MUST be first):
 
 | Source | Destination |
 |--------|-------------|
+| `/api/*` | `https://superstore-erp-api.onrender.com/api/*` |
 | `/*` | `/index.html` |
 
 ---
@@ -164,10 +165,43 @@ Render free services **sleep after 15 minutes** of inactivity. First request may
 | Frontend API | Vite proxy `/api` → localhost:5000 | `VITE_API_URL` env var |
 | CORS | localhost allowed | `CLIENT_URL` required |
 
+### If login returns 200 with empty body (most common bug)
+
+**Symptom:** POST `/api/auth/login` on `superstore-erp.onrender.com` returns `200` but `content-length: 0`, login never redirects.
+
+**Cause:** The frontend is calling itself (static site), not the backend. The SPA rewrite `/* → index.html` swallows API requests.
+
+**Fix (do both):**
+
+1. **Frontend env var** → Render → `superstore-erp` → Environment:
+   ```text
+   VITE_API_URL=https://superstore-erp-api.onrender.com/api
+   ```
+   Then click **Manual Deploy → Clear build cache & deploy** (Vite bakes this at build time).
+
+2. **Add API proxy rewrite** → Render → `superstore-erp` → Redirects/Rewrites:
+   | Source | Destination |
+   |--------|-------------|
+   | `/api/*` | `https://superstore-erp-api.onrender.com/api/*` |
+   | `/*` | `/index.html` |
+
+   The `/api/*` rule must be **above** the `/*` rule.
+
+3. **Backend CORS** → Render → `superstore-erp-api` → Environment:
+   ```text
+   CLIENT_URL=https://superstore-erp.onrender.com
+   ```
+
+4. **Verify backend directly** — open in browser:
+   ```text
+   https://superstore-erp-api.onrender.com/
+   ```
+   Should show: `{"message":"Superstore ERP API is running"}`
+
 ### If login fails after deploy
 
-1. Check backend URL opens: `https://your-api.onrender.com/` → should show JSON message
-2. Check `VITE_API_URL` ends with `/api`
+1. Check backend URL opens: `https://superstore-erp-api.onrender.com/` → should show JSON message
+2. Check `VITE_API_URL` ends with `/api` and frontend was **rebuilt** after setting it
 3. Check `CLIENT_URL` matches frontend URL exactly (no trailing slash)
 4. Run `npm run seed` in backend Shell if users don't exist
 5. Check MongoDB Atlas Network Access allows `0.0.0.0/0`

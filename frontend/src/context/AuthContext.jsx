@@ -30,6 +30,9 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     const { data } = await api.post('/auth/login', { email, password });
+    if (!data?.token || !data?.user) {
+      throw new Error('Invalid login response — check that VITE_API_URL points to your backend API');
+    }
     localStorage.setItem('token', data.token);
     localStorage.setItem('user', JSON.stringify(data.user));
     setUser(data.user);
