@@ -39,7 +39,9 @@ export default function Users() {
   };
 
   useEffect(() => {
-    api.get('/users/roles').then((res) => setRoles(res.data.roles));
+    api.get('/users/roles')
+      .then((res) => setRoles(res.data.roles))
+      .catch((err) => setError(err.response?.data?.message || 'Failed to load roles'));
     fetchUsers();
   }, [search, roleFilter]);
 
@@ -56,6 +58,7 @@ export default function Users() {
 
   const viewPermissions = (role) => {
     const r = roles.find((x) => x.id === role);
+    if (!r) return;
     setSelectedRole(r);
     setPermOpen(true);
   };
@@ -119,8 +122,13 @@ export default function Users() {
 
       {/* Role permission cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        {roles.map((role) => (
-          <Card key={role.id} className="cursor-pointer hover:border-blue-200" onClick={() => viewPermissions(role.id)}>
+        {roles.length === 0 ? (
+          <Card className="md:col-span-2 text-center text-sm text-slate-500 py-6">
+            Loading roles… (deploy latest backend if this stays empty)
+          </Card>
+        ) : (
+        roles.map((role) => (
+          <Card key={role.id} className="hover:border-blue-200" onClick={() => viewPermissions(role.id)}>
             <div className="flex items-start gap-3">
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${role.id === 'admin' ? 'bg-violet-100' : 'bg-blue-100'}`}>
                 {role.id === 'admin' ? <ShieldCheck className="w-5 h-5 text-violet-600" /> : <Shield className="w-5 h-5 text-blue-600" />}
@@ -128,7 +136,11 @@ export default function Users() {
               <div className="flex-1">
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold text-slate-800 capitalize">{role.label}</h3>
-                  <button className="text-xs text-blue-600 hover:underline flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); viewPermissions(role.id); }}
+                    className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                  >
                     <Eye className="w-3 h-3" /> View permissions
                   </button>
                 </div>
@@ -136,7 +148,8 @@ export default function Users() {
               </div>
             </div>
           </Card>
-        ))}
+        ))
+        )}
       </div>
 
       <Card className="mb-4 flex gap-3 flex-wrap">
