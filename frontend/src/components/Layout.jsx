@@ -21,21 +21,21 @@ import { useAuth } from '../context/AuthContext';
 import Button from './Button';
 
 const navItems = [
-  { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'cashier'] },
-  { path: '/pos', label: 'POS', icon: ShoppingCart, roles: ['admin', 'cashier'] },
-  { path: '/products', label: 'Products', icon: Package, roles: ['admin', 'cashier'] },
-  { path: '/categories', label: 'Categories', icon: Tags, roles: ['admin'] },
-  { path: '/inventory', label: 'Inventory', icon: ClipboardList, roles: ['admin'] },
-  { path: '/customers', label: 'Customers', icon: Users, roles: ['admin', 'cashier'] },
-  { path: '/suppliers', label: 'Suppliers', icon: Factory, roles: ['admin'] },
-  { path: '/purchases', label: 'Purchases', icon: Download, roles: ['admin'] },
-  { path: '/sales', label: 'Sales', icon: DollarSign, roles: ['admin', 'cashier'] },
-  { path: '/reports', label: 'Reports', icon: BarChart3, roles: ['admin'] },
-  { path: '/users', label: 'Staff & Roles', icon: UserCog, roles: ['admin'] },
+  { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, permission: 'view_dashboard' },
+  { path: '/pos', label: 'POS', icon: ShoppingCart, permission: 'create_sales' },
+  { path: '/products', label: 'Products', icon: Package, permission: ['view_products', 'manage_products'] },
+  { path: '/categories', label: 'Categories', icon: Tags, permission: 'manage_categories' },
+  { path: '/inventory', label: 'Inventory', icon: ClipboardList, permission: 'manage_inventory' },
+  { path: '/customers', label: 'Customers', icon: Users, permission: ['view_customers', 'manage_customers'] },
+  { path: '/suppliers', label: 'Suppliers', icon: Factory, permission: 'manage_suppliers' },
+  { path: '/purchases', label: 'Purchases', icon: Download, permission: 'manage_purchases' },
+  { path: '/sales', label: 'Sales', icon: DollarSign, permission: ['view_all_sales', 'view_own_sales'] },
+  { path: '/reports', label: 'Reports', icon: BarChart3, permission: 'view_reports' },
+  { path: '/users', label: 'Staff & Roles', icon: UserCog, permission: 'manage_users' },
 ];
 
 export default function Layout() {
-  const { user, logout } = useAuth();
+  const { user, logout, hasPermission } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -44,7 +44,10 @@ export default function Layout() {
     navigate('/login');
   };
 
-  const filteredNav = navItems.filter((item) => item.roles.includes(user?.role));
+  const filteredNav = navItems.filter((item) => {
+    const perms = Array.isArray(item.permission) ? item.permission : [item.permission];
+    return hasPermission(...perms);
+  });
 
   const sidebar = (
     <>

@@ -1,5 +1,11 @@
 const User = require('../models/User');
-const { PERMISSIONS, ROLE_PERMISSIONS } = require('../utils/permissions');
+const {
+  PERMISSIONS,
+  ROLE_PERMISSIONS,
+  sanitizePermissions,
+  getUserPermissions,
+  formatPermissions,
+} = require('../utils/permissions');
 const { validationResult } = require('express-validator');
 
 const validate = (req, res, next) => {
@@ -8,6 +14,12 @@ const validate = (req, res, next) => {
     return res.status(400).json({ message: errors.array()[0].msg, errors: errors.array() });
   }
   next();
+};
+
+const attachPermissions = (user) => {
+  const json = user.toJSON();
+  json.effectivePermissions = getUserPermissions(user);
+  return json;
 };
 
 const getUsers = async (req, res) => {
@@ -30,7 +42,7 @@ const getUsers = async (req, res) => {
     ]);
 
     res.json({
-      users,
+      users: users.map(attachPermissions),
       pagination: { page: parseInt(page), limit: parseInt(limit), total, pages: Math.ceil(total / parseInt(limit)) },
     });
   } catch (error) {
@@ -43,8 +55,8 @@ const getUserById = async (req, res) => {
     const user = await User.findById(req.params.id).select('-password');
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.json({
-      user,
-      permissions: ROLE_PERMISSIONS[user.role] || [],
+      user: attachPermissions(user),
+      permissions: getUserPermissions(user),
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -53,12 +65,27 @@ const getUserById = async (req, res) => {
 
 const createUser = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, permissions } = req.body;
     const exists = await User.findOne({ email });
     if (exists) return res.status(400).json({ message: 'Email already registered' });
 
-    const user = await User.create({ name, email, password, role: role || 'cashier' });
-    res.status(201).json({ user: user.toJSON(), permissions: ROLE_PERMISSIONS[user.role] });
+    const userRole = role || 'cashier';
+    const userPermissions = sanitizePermissions(permissions);
+    const finalPermissions = userPermissions.length > 0 ? userPermissions : ROLE_PERMISSIONS[userRole];
+
+    if (finalPermissions.length === 0) {
+      return res.status(400).json({ message: 'At least one permission is required' });
+    }
+
+    const user = await User.create({
+      name,
+      email,
+      password,
+      role: userRole,
+      permissions: finalPermissions,
+    });
+
+    res.status(201).json({ user: attachPermissions(user) });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -69,17 +96,18 @@ const updateUser = async (req, res) => {
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    // Prevent deactivating or demoting yourself
     if (user._id.toString() === req.user._id.toString()) {
       if (req.body.isActive === false) {
         return res.status(400).json({ message: 'You cannot deactivate your own account' });
       }
-      if (req.body.role && req.body.role !== 'admin') {
+      if (req.body.role && req.body.role !== user.role) {
         return res.status(400).json({ message: 'You cannot change your own role' });
+      }
+      if (req.body.permissions) {
+        return res.status(400).json({ message: 'You cannot change your own permissions' });
       }
     }
 
-    // Prevent removing last admin
     if (user.role === 'admin' && req.body.role === 'cashier') {
       const adminCount = await User.countDocuments({ role: 'admin', isActive: true, _id: { $ne: user._id } });
       if (adminCount === 0) {
@@ -92,8 +120,25 @@ const updateUser = async (req, res) => {
     if (req.body.isActive !== undefined) user.isActive = req.body.isActive;
     if (req.body.password) user.password = req.body.password;
 
+    if (req.body.permissions) {
+      const perms = sanitizePermissions(req.body.permissions);
+      if (perms.length === 0) {
+        return res.status(400).json({ message: 'At least one permission is required' });
+      }
+      user.permissions = perms;
+    }
+
+    // Last admin must keep manage_users
+    if (user.role === 'admin') {
+      const adminCount = await User.countDocuments({ role: 'admin', isActive: true, _id: { $ne: user._id } });
+      const perms = getUserPermissions(user);
+      if (adminCount === 0 && !perms.includes('manage_users')) {
+        return res.status(400).json({ message: 'Last admin must have manage_users permission' });
+      }
+    }
+
     await user.save();
-    res.json({ user: user.toJSON(), permissions: ROLE_PERMISSIONS[user.role] });
+    res.json({ user: attachPermissions(user) });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -117,7 +162,7 @@ const deleteUser = async (req, res) => {
 
     user.isActive = false;
     await user.save();
-    res.json({ message: 'User deactivated', user: user.toJSON() });
+    res.json({ message: 'User deactivated', user: attachPermissions(user) });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -125,9 +170,10 @@ const deleteUser = async (req, res) => {
 
 const getRoles = async (req, res) => {
   res.json({
+    allPermissions: formatPermissions(Object.keys(PERMISSIONS)),
     roles: [
-      { id: 'admin', label: 'Admin', permissions: ROLE_PERMISSIONS.admin.map((p) => ({ id: p, label: PERMISSIONS[p] })) },
-      { id: 'cashier', label: 'Cashier', permissions: ROLE_PERMISSIONS.cashier.map((p) => ({ id: p, label: PERMISSIONS[p] })) },
+      { id: 'admin', label: 'Admin', permissions: formatPermissions(ROLE_PERMISSIONS.admin) },
+      { id: 'cashier', label: 'Cashier', permissions: formatPermissions(ROLE_PERMISSIONS.cashier) },
     ],
   });
 };

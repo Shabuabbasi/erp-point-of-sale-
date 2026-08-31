@@ -16,7 +16,8 @@ import Badge from '../components/Badge';
 const formatCurrency = (amount) => `Rs.${Number(amount).toLocaleString()}`;
 
 export default function Products() {
-  const { isAdmin } = useAuth();
+  const { hasPermission } = useAuth();
+  const isAdmin = hasPermission('manage_products');
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);

@@ -1,6 +1,13 @@
 const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
 const User = require('../models/User');
+const { getUserPermissions } = require('../utils/permissions');
+
+const attachUser = (user) => {
+  const json = user.toJSON();
+  json.effectivePermissions = getUserPermissions(user);
+  return json;
+};
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -31,7 +38,7 @@ const login = async (req, res) => {
     }
 
     res.json({
-      user: user.toJSON(),
+      user: attachUser(user),
       token: generateToken(user._id),
     });
   } catch (error) {
@@ -57,7 +64,7 @@ const register = async (req, res) => {
 
 // GET /api/auth/me
 const getMe = async (req, res) => {
-  res.json({ user: req.user.toJSON() });
+  res.json({ user: attachUser(req.user) });
 };
 
 module.exports = { login, register, getMe, validate };

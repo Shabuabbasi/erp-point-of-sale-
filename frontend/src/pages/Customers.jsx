@@ -16,7 +16,8 @@ import Input from '../components/Input';
 const formatCurrency = (amount) => `Rs.${Number(amount).toLocaleString()}`;
 
 export default function Customers() {
-  const { isAdmin } = useAuth();
+  const { hasPermission } = useAuth();
+  const canManage = hasPermission('manage_customers');
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -90,7 +91,7 @@ export default function Customers() {
       <PageHeader
         title="Customers"
         description="Manage registered customers and view purchase history"
-        action={isAdmin && (
+        action={canManage && (
           <Button onClick={() => openModal()}>
             <Plus className="w-4 h-4" />
             Add Customer
@@ -144,7 +145,7 @@ export default function Customers() {
                         <button onClick={() => viewHistory(c._id)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="History">
                           <History className="w-4 h-4" />
                         </button>
-                        {isAdmin && !c.isWalkIn && (
+                        {canManage && !c.isWalkIn && (
                           <>
                             <button onClick={() => openModal(c)} className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition" title="Edit">
                               <Pencil className="w-4 h-4" />

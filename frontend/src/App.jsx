@@ -37,17 +37,17 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       >
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/pos" element={<POS />} />
-        <Route path="/products" element={<Products />} />
-        <Route path="/categories" element={<ProtectedRoute adminOnly><Categories /></ProtectedRoute>} />
-        <Route path="/inventory" element={<ProtectedRoute adminOnly><Inventory /></ProtectedRoute>} />
-        <Route path="/customers" element={<Customers />} />
-        <Route path="/suppliers" element={<ProtectedRoute adminOnly><Suppliers /></ProtectedRoute>} />
-        <Route path="/purchases" element={<ProtectedRoute adminOnly><Purchases /></ProtectedRoute>} />
-        <Route path="/sales" element={<Sales />} />
-        <Route path="/reports" element={<ProtectedRoute adminOnly><Reports /></ProtectedRoute>} />
-        <Route path="/users" element={<ProtectedRoute adminOnly><Users /></ProtectedRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute permission="view_dashboard"><Dashboard /></ProtectedRoute>} />
+        <Route path="/pos" element={<ProtectedRoute permission="create_sales"><POS /></ProtectedRoute>} />
+        <Route path="/products" element={<ProtectedRoute permission={['view_products', 'manage_products']}><Products /></ProtectedRoute>} />
+        <Route path="/categories" element={<ProtectedRoute permission="manage_categories"><Categories /></ProtectedRoute>} />
+        <Route path="/inventory" element={<ProtectedRoute permission="manage_inventory"><Inventory /></ProtectedRoute>} />
+        <Route path="/customers" element={<ProtectedRoute permission={['view_customers', 'manage_customers']}><Customers /></ProtectedRoute>} />
+        <Route path="/suppliers" element={<ProtectedRoute permission="manage_suppliers"><Suppliers /></ProtectedRoute>} />
+        <Route path="/purchases" element={<ProtectedRoute permission="manage_purchases"><Purchases /></ProtectedRoute>} />
+        <Route path="/sales" element={<ProtectedRoute permission={['view_all_sales', 'view_own_sales']}><Sales /></ProtectedRoute>} />
+        <Route path="/reports" element={<ProtectedRoute permission="view_reports"><Reports /></ProtectedRoute>} />
+        <Route path="/users" element={<ProtectedRoute permission="manage_users"><Users /></ProtectedRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>

@@ -1,4 +1,4 @@
-// Simple role-based permissions (easy to explain in interview)
+// All available permissions in the system
 const PERMISSIONS = {
   manage_users: 'Manage staff accounts',
   manage_products: 'Create, edit, delete products',
@@ -18,20 +18,7 @@ const PERMISSIONS = {
 };
 
 const ROLE_PERMISSIONS = {
-  admin: [
-    'manage_users',
-    'manage_products',
-    'manage_categories',
-    'manage_inventory',
-    'manage_customers',
-    'manage_suppliers',
-    'manage_purchases',
-    'create_sales',
-    'view_all_sales',
-    'process_returns',
-    'view_reports',
-    'view_dashboard',
-  ],
+  admin: Object.keys(PERMISSIONS),
   cashier: [
     'view_products',
     'view_customers',
@@ -42,8 +29,33 @@ const ROLE_PERMISSIONS = {
   ],
 };
 
-const hasPermission = (role, permission) => {
-  return ROLE_PERMISSIONS[role]?.includes(permission) ?? false;
+const ALL_PERMISSION_KEYS = Object.keys(PERMISSIONS);
+
+const sanitizePermissions = (list) => {
+  if (!Array.isArray(list)) return [];
+  return [...new Set(list.filter((p) => ALL_PERMISSION_KEYS.includes(p)))];
 };
 
-module.exports = { PERMISSIONS, ROLE_PERMISSIONS, hasPermission };
+const getUserPermissions = (user) => {
+  if (!user) return [];
+  const custom = sanitizePermissions(user.permissions);
+  if (custom.length > 0) return custom;
+  return ROLE_PERMISSIONS[user.role] || [];
+};
+
+const hasPermission = (user, permission) => {
+  return getUserPermissions(user).includes(permission);
+};
+
+const formatPermissions = (ids) =>
+  ids.map((id) => ({ id, label: PERMISSIONS[id] }));
+
+module.exports = {
+  PERMISSIONS,
+  ROLE_PERMISSIONS,
+  ALL_PERMISSION_KEYS,
+  sanitizePermissions,
+  getUserPermissions,
+  hasPermission,
+  formatPermissions,
+};

@@ -27,6 +27,7 @@ router.post(
     body('email').isEmail().withMessage('Valid email required'),
     body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
     body('role').isIn(['admin', 'cashier']).withMessage('Role must be admin or cashier'),
+    body('permissions').optional().isArray().withMessage('Permissions must be an array'),
   ],
   validate,
   createUser
@@ -39,6 +40,7 @@ router.put(
     body('role').optional().isIn(['admin', 'cashier']).withMessage('Invalid role'),
     body('password').optional().isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
     body('isActive').optional().isBoolean(),
+    body('permissions').optional().isArray().withMessage('Permissions must be an array'),
   ],
   validate,
   updateUser
