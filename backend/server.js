@@ -1,4 +1,5 @@
 require('dotenv').config();
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/db');
@@ -16,6 +17,7 @@ const reportRoutes = require('./routes/reportRoutes');
 connectDB();
 
 const app = express();
+const isProduction = process.env.NODE_ENV === 'production';
 
 const allowedOrigins = [
   process.env.CLIENT_URL,
@@ -25,16 +27,13 @@ const allowedOrigins = [
 
 app.use(
   cors({
-    origin: allowedOrigins.length > 0 ? allowedOrigins : true,
+    origin: isProduction && allowedOrigins.length > 0 ? allowedOrigins : true,
     credentials: true,
   })
 );
 app.use(express.json());
 
-app.get('/', (req, res) => {
-  res.json({ message: 'Superstore ERP API is running' });
-});
-
+// API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/products', productRoutes);
@@ -44,6 +43,19 @@ app.use('/api/suppliers', supplierRoutes);
 app.use('/api/purchases', purchaseRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/reports', reportRoutes);
+
+// Production: serve React frontend from same server (fixes /api routing on Render)
+if (isProduction) {
+  const frontendDist = path.join(__dirname, '../frontend/dist');
+  app.use(express.static(frontendDist));
+  app.get(/^(?!\/api).*/, (req, res) => {
+    res.sendFile(path.join(frontendDist, 'index.html'));
+  });
+} else {
+  app.get('/', (req, res) => {
+    res.json({ message: 'Superstore ERP API is running' });
+  });
+}
 
 app.use((err, req, res, next) => {
   console.error(err.stack);

@@ -1,13 +1,12 @@
 services:
-  # Backend API
+  # Single service: API + React frontend on one URL
   - type: web
-    name: superstore-erp-api
+    name: superstore-erp
     runtime: node
     region: singapore
     plan: free
-    rootDir: backend
-    buildCommand: npm install
-    startCommand: npm start
+    buildCommand: cd frontend && npm install && npm run build && cd ../backend && npm install
+    startCommand: node backend/server.js
     envVars:
       - key: NODE_ENV
         value: production
@@ -19,25 +18,4 @@ services:
         value: 7d
       - key: TAX_RATE
         value: 0
-      - key: CLIENT_URL
-        value: https://superstore-erp.onrender.com
     healthCheckPath: /
-
-  # Frontend (Static Site)
-  - type: web
-    name: superstore-erp
-    runtime: static
-    rootDir: frontend
-    buildCommand: npm install && npm run build
-    staticPublishPath: dist
-    envVars:
-      - key: VITE_API_URL
-        value: https://superstore-erp-api.onrender.com/api
-    routes:
-      # Proxy API calls to backend (must be BEFORE the SPA catch-all)
-      - type: rewrite
-        source: /api/*
-        destination: https://superstore-erp-api.onrender.com/api/*
-      - type: rewrite
-        source: /*
-        destination: /index.html

@@ -167,38 +167,31 @@ Render free services **sleep after 15 minutes** of inactivity. First request may
 
 ### If login returns 200 with empty body (most common bug)
 
-**Symptom:** POST `/api/auth/login` on `superstore-erp.onrender.com` returns `200` but `content-length: 0`, login never redirects.
+**Symptom:** POST `/api/auth/login` returns `200` but empty body, UI shows "Login failed".
 
-**Cause:** The frontend is calling itself (static site), not the backend. The SPA rewrite `/* → index.html` swallows API requests.
+**Cause:** Frontend static site on Render cannot reliably proxy `/api` to a separate backend. Requests hit the static site rewrite instead of your Express API.
 
-**Fix (do both):**
+**Fix — use single-service deploy (recommended):**
 
-1. **Frontend env var** → Render → `superstore-erp` → Environment:
+This project now serves the React app **from Express** on one URL. API and frontend share the same domain, so `/api` works automatically.
+
+1. **Delete** the old separate static site service on Render (if you created one)
+2. Push latest code and redeploy the **single** `superstore-erp` web service from `render.yaml`
+3. Set only these env vars on the web service:
    ```text
-   VITE_API_URL=https://superstore-erp-api.onrender.com/api
+   MONGODB_URI=your_atlas_connection_string
+   JWT_SECRET=any_long_random_string
    ```
-   Then click **Manual Deploy → Clear build cache & deploy** (Vite bakes this at build time).
+4. Run seed once in Shell: `cd backend && npm run seed`
+5. Open `https://superstore-erp.onrender.com` — login should hit the real API
 
-2. **Add API proxy rewrite** → Render → `superstore-erp` → Redirects/Rewrites:
-   | Source | Destination |
-   |--------|-------------|
-   | `/api/*` | `https://superstore-erp-api.onrender.com/api/*` |
-   | `/*` | `/index.html` |
+**Verify:** Network tab should show login POST to `superstore-erp.onrender.com/api/auth/login` with a JSON response containing `token` and `user` (not empty body).
 
-   The `/api/*` rule must be **above** the `/*` rule.
+---
 
-3. **Backend CORS** → Render → `superstore-erp-api` → Environment:
-   ```text
-   CLIENT_URL=https://superstore-erp.onrender.com
-   ```
+### Old two-service setup (not recommended)
 
-4. **Verify backend directly** — open in browser:
-   ```text
-   https://superstore-erp-api.onrender.com/
-   ```
-   Should show: `{"message":"Superstore ERP API is running"}`
-
-### If login fails after deploy
+If you still use separate frontend + backend services:
 
 1. Check backend URL opens: `https://superstore-erp-api.onrender.com/` → should show JSON message
 2. Check `VITE_API_URL` ends with `/api` and frontend was **rebuilt** after setting it
