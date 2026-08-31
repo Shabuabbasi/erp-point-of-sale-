@@ -1,4 +1,5 @@
 require('dotenv').config();
+const fs = require('fs');
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
@@ -29,7 +30,6 @@ app.use(
   cors({
     origin(origin, callback) {
       if (!origin) return callback(null, true);
-      // If CLIENT_URL not set in production, allow all (set CLIENT_URL for security)
       if (isProduction && !process.env.CLIENT_URL) return callback(null, true);
       if (allowedOrigins.includes(origin)) return callback(null, true);
       return callback(new Error(`CORS blocked for origin: ${origin}`));
@@ -50,9 +50,11 @@ app.use('/api/purchases', purchaseRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/reports', reportRoutes);
 
-// Production: serve React frontend from same server (fixes /api routing on Render)
-if (isProduction) {
-  const frontendDist = path.join(__dirname, '../frontend/dist');
+// Serve React frontend only when dist exists (single-service deploy)
+const frontendDist = path.join(__dirname, '../frontend/dist');
+const hasFrontendBuild = fs.existsSync(path.join(frontendDist, 'index.html'));
+
+if (hasFrontendBuild) {
   app.use(express.static(frontendDist));
   app.get(/^(?!\/api).*/, (req, res) => {
     res.sendFile(path.join(frontendDist, 'index.html'));
