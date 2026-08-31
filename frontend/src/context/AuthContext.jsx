@@ -3,29 +3,48 @@ import api from '../api/axios';
 
 const AuthContext = createContext(null);
 
+const isValidToken = (token) => token && token !== 'undefined' && token !== 'null';
+
+const parseStoredUser = (raw) => {
+  if (!raw || raw === 'undefined' || raw === 'null') return null;
+  try {
+    const user = JSON.parse(raw);
+    return user && typeof user === 'object' ? user : null;
+  } catch {
+    return null;
+  }
+};
+
+const clearAuthStorage = () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+};
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    const savedUser = localStorage.getItem('user');
-    if (token && savedUser) {
-      setUser(JSON.parse(savedUser));
-      api.get('/auth/me')
-        .then((res) => {
-          setUser(res.data.user);
-          localStorage.setItem('user', JSON.stringify(res.data.user));
-        })
-        .catch(() => {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          setUser(null);
-        })
-        .finally(() => setLoading(false));
-    } else {
+    const savedUser = parseStoredUser(localStorage.getItem('user'));
+
+    if (!isValidToken(token) || !savedUser) {
+      clearAuthStorage();
       setLoading(false);
+      return;
     }
+
+    setUser(savedUser);
+    api.get('/auth/me')
+      .then((res) => {
+        setUser(res.data.user);
+        localStorage.setItem('user', JSON.stringify(res.data.user));
+      })
+      .catch(() => {
+        clearAuthStorage();
+        setUser(null);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const login = async (email, password) => {
@@ -40,8 +59,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    clearAuthStorage();
     setUser(null);
   };
 
