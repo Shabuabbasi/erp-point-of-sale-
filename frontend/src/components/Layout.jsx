@@ -14,6 +14,7 @@ import {
   LogOut,
   Menu,
   X,
+  UserCog,
   Store,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -30,6 +31,7 @@ const navItems = [
   { path: '/purchases', label: 'Purchases', icon: Download, roles: ['admin'] },
   { path: '/sales', label: 'Sales', icon: DollarSign, roles: ['admin', 'cashier'] },
   { path: '/reports', label: 'Reports', icon: BarChart3, roles: ['admin'] },
+  { path: '/users', label: 'Staff & Roles', icon: UserCog, roles: ['admin'] },
 ];
 
 export default function Layout() {

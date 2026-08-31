@@ -13,6 +13,7 @@ import Suppliers from './pages/Suppliers';
 import Purchases from './pages/Purchases';
 import Sales from './pages/Sales';
 import Reports from './pages/Reports';
+import Users from './pages/Users';
 import Spinner from './components/Spinner';
 
 function AppRoutes() {
@@ -46,6 +47,7 @@ function AppRoutes() {
         <Route path="/purchases" element={<ProtectedRoute adminOnly><Purchases /></ProtectedRoute>} />
         <Route path="/sales" element={<Sales />} />
         <Route path="/reports" element={<ProtectedRoute adminOnly><Reports /></ProtectedRoute>} />
+        <Route path="/users" element={<ProtectedRoute adminOnly><Users /></ProtectedRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
